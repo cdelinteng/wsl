@@ -1,0 +1,152 @@
+section .data
+	menu db 'Welcome!' ,0xA, 0
+	db '1.Line', 0xA, 0
+	db '2.Rectangle', 0xA, 0
+	db '3.Square', 0xA, 0
+	db '4.Circle', 0xA, 0
+	db '5.Triangle', 0xA, 0
+	db '6.Exit', 0xA, 0
+	db 'Enter your choice:', 0xA, 0
+
+	menu_len equ $ - menu
+
+	;Error msg
+	invalid_msg db 'Invalid choice!', 0xA, 0
+	invalid_len equ $ - invalid_msg
+
+	;Shape char
+	star db '*'
+	space db ' '
+	newline db 0xA
+
+section .bss
+	choice resb 2 		;1 byte+enter
+	row resb 1
+	col resb 1
+	star_count resb 1	;count stars per row
+	space_count resb 1	;count spaces for alignment
+
+section .text
+	global _start
+
+_start:
+	；print menu
+	mov eax, 4
+	mov ebx, 1
+	mov ecx, menu
+	mov edx, menu_len
+	int 0x80
+
+	;get choice
+	mov eax, 3
+	mov ebx, 0
+	mov ecx, choice
+	mov edx, 2
+	int 0x80
+
+	;process choice
+	mov al [choice]
+	cmp al, '1'
+	je draw_line		;je = jump if equal
+	cmp al, '2'
+	je draw_rectangle
+	cmp al '3'
+	je draw_square
+	cmp al '4'
+	je draw_circle
+	cmp al '5'
+	je draw_triangle
+	cmp al '6'
+	je exit_program
+
+	;invalid
+	mov eax, 4
+	mov ebx, 1
+	mov ecx, invalid_msg
+	mov edx, invalid_len
+	int 0x80
+	jmp _start
+
+draw_line:
+	mov  byte [col], 0
+.line_loop:
+	call print_star
+	inc byte [col]		;Increments the column counter
+	cmp byte [col], 10	;jl= jump if less
+	jl .line_loop
+	call print_newline
+	jmp _start
+
+draw_rectangle:
+	; 7x3 rectangle
+	mov byte [row], 0
+.rect_row_loop:
+	mov byte [col], 0
+.rect_col_loop:
+	call print_star
+	inc byte [col]
+	cmp byte [col], 7
+	jl .rect_col_loop
+	call print_newline
+	inc byte [row]
+	cmp byte [row], 3
+	jl .rect_row_loop
+	jmp _start
+
+draw_square:
+	;5x5 square
+	move byte [row], 0
+.square_row_loop:
+	move byte [col], 0
+.square_col_loop:
+	call print star
+	inc byte [col]
+	cmp byte [col], 5
+	jl .square_col_loop
+	call print_newline
+	inc byte [row]
+	cmp byte [row], 5
+	jl .square_row_loop
+	jmp _start
+
+draw_triangle:
+	mov byte [row], 0
+.triangle_loop:
+	;calculate spaces (4-row)
+	mov al, 4
+	sub al, [row]
+	mov [spaces_count], al
+
+	;calculate stars (2 x row+1)
+	mov al, [row]
+	add al, al		; x2
+	inc al			; add 1
+	mov [star_count], al
+
+.print_spaces:
+	cmp byte [spaces_count], 0
+	jle .print_stars 
+	call print_space
+	dec byte [spaces_count]
+	jmp .print_spaces
+
+.print_stars:
+	call print_star
+	dec byte [star_count]
+	jnz .print_stars
+
+	call print_newline
+	inc byte [row]
+	cmp byte [row], 5
+	jl .triangle_loop
+	jmp _start
+
+draw_circle:
+	mov byte [row],0 
+	mov byte [star_count],1
+	mov byte [space_count],2
+
+.circle_loop:
+	;print spaces
+	mov cl, [spaces_count]
+

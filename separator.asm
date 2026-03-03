@@ -1,0 +1,40 @@
+section .data
+msg1 db 'Hello, World!', 0xA   ; first string
+len1 equ $ - msg1
+
+msg2 db 'Welcome to NASM programming!', 0xA  ; second string
+len2 equ $ - msg2
+
+sep db '**********' , 0xA
+seplen equ $ - sep
+
+section .text
+global _start
+
+
+_start:
+    ; write the first string to stdout
+    mov eax, 4           ; sys_write (system call number)
+    mov ebx, 1           ; file descriptor 1 (stdout)
+    mov ecx, msg1        ; memory address of the first string
+    mov edx, len1        ; number of bytes for the first string
+    int 0x80             ; call kernel
+
+    ;print separator
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, sep
+    mov edx, seplen
+    int 0x80
+
+    ; write the second string to stdout
+    mov eax, 4           ; sys_write (system call number)
+    mov ebx, 1           ; file descriptor 1 (stdout)
+    mov ecx, msg2        ; memory address of the second string
+    mov edx, len2        ; number of bytes for the second string
+    int 0x80             ; call kernel
+
+    ; exit the program
+    mov eax, 1           ; sys_exit (system call number)
+    xor ebx, ebx         ; return code 0
+    int 0x80             ; call kernel

@@ -1,0 +1,353 @@
+section .data
+    menu db 'Welcome!', 0xA,
+	 db '1. Line', 0xA,
+         db '2. Rectangle', 0xA,
+         db '3. Diamond', 0xA,
+         db '4. Square', 0xA,
+         db '5. Triangle', 0xA,
+         db '6. Exit', 0xA,
+         db 'Enter your choice: ', 0
+    menu_len equ $ - menu
+
+    prompt_len db 'Enter length:', 0
+    prompt_len_len equ $ - prompt_len
+    prompt_height db 'Enter height:', 0
+    prompt_height_len equ $ - prompt_height
+
+    invalid db 'Invalid choice!', 0xA, 0
+    invalid_len equ $ - invalid
+
+    star db '*'
+    space db ' '
+    newline db 0xA
+
+section .bss
+    choice resb 2
+    input_buffer resb 10
+    length resb 1
+    height resb 1
+    row resb 1
+    col resb 1
+    star_count resb 1
+    space_count resb 1
+
+section .text
+    global _start
+
+_start:
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, menu
+    mov edx, menu_len
+    int 0x80
+
+    mov eax, 3
+    mov ebx, 0
+    mov ecx, choice
+    mov edx, 2
+    int 0x80
+
+    mov al, [choice]
+    cmp al, '1'
+    je get_line_length
+    cmp al, '2'
+    je get_rectangle_dimensions
+    cmp al, '3'
+    je get_diamond_height
+    cmp al, '4'
+    je get_square_length
+    cmp al, '5'
+    je get_triangle_height
+    cmp al, '6'
+    je exit_program
+
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, invalid
+    mov edx, invalid_len
+    int 0x80
+    jmp _start
+
+get_line_length:
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, prompt_len
+    mov edx, prompt_len_len
+    int 0x80
+
+    call read_number
+    mov [length], al
+    mov [height], al
+    jmp draw_line
+
+get_rectangle_dimensions:
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, prompt_len
+    mov edx, prompt_len_len
+    int 0x80
+
+    call read_number
+    mov [length], al
+
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, prompt_height
+    mov edx, prompt_height_len
+    int 0x80
+    
+    call read_number
+    mov [height], al
+    jmp draw_rectangle
+
+get_square_length:
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, prompt_len
+    mov edx, prompt_len_len
+    int 0x80
+
+    call read_number
+    mov [length], al
+    mov [height], al
+    jmp draw_rectangle
+
+get_triangle_height:
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, prompt_height
+    mov edx, prompt_height_len
+    int 0x80
+
+    call read_number
+    mov [height], al
+    jmp draw_triangle
+
+draw_line:
+    movzx ecx, byte [height]
+.line_loop:
+    mov eax, 4
+    mov ebx, 1
+    push ecx
+    mov ecx, star
+    mov edx, 1
+    int 0x80
+    pop ecx
+    loop .line_loop
+
+    call print_newline
+    jmp _start
+
+draw_rectangle:
+    mov byte [row], 0
+.rect_row_loop:
+    mov byte [col], 0
+.rect_col_loop:
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, star
+    mov edx, 1
+    int 0x80
+
+    mov al, [col]
+    inc al
+    mov [col], al
+    cmp al, [length]
+    jl .rect_col_loop
+
+    call print_newline
+    mov al, [row]
+    inc al
+    mov [row], al
+    cmp al, [height]
+    jl .rect_row_loop
+
+    jmp _start
+
+draw_triangle:
+    mov byte [row], 1
+.triangle_loop:
+    mov al, [height]
+    sub al, [row]
+    mov [space_count], al
+
+.print_spaces:
+    cmp byte [space_count], 0
+    jle .print_stars
+    
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, space
+    mov edx, 1
+    int 0x80
+    
+    dec byte [space_count]
+    jmp .print_spaces
+
+.print_stars:
+    mov al, [row]
+    add al, al
+    dec al
+    mov [star_count], al
+
+.print_star:
+    cmp byte [star_count], 0
+    jle .next_line
+    
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, star
+    mov edx, 1
+    int 0x80
+    
+    dec byte [star_count]
+    jmp .print_star
+
+.next_line:
+    call print_newline
+    inc byte [row]
+    mov al, [row]
+    cmp al, [height]
+    jle .triangle_loop
+    
+    jmp _start
+
+get_diamond_height:
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, prompt_height
+    mov edx, prompt_height_len
+    int 0x80
+
+    call read_number
+    mov [height], al
+    jmp draw_diamond
+
+draw_diamond:
+    mov byte [row], 1
+.diamond_top:
+    mov al, [height]
+    sub al, [row]
+    mov [space_count], al
+
+.print_top_spaces:
+    cmp byte [space_count], 0
+    jle .print_top_stars
+
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, space
+    mov edx, 1
+    int 0x80
+
+    dec byte [space_count]
+    jmp .print_top_spaces
+
+.print_top_stars:
+    mov al, [row]
+    add al, al
+    dec al
+    mov [star_count], al
+
+.print_top_star:
+    cmp byte [star_count], 0
+    jle .next_diamond_top
+
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, star
+    mov edx, 1
+    int 0x80
+
+    dec byte [star_count]
+    jmp .print_top_star
+
+.next_diamond_top:
+    call print_newline
+    inc byte [row]
+    mov al, [row]
+    cmp al, [height]
+    jle .diamond_top
+
+    dec byte [row]
+.diamond_bottom:
+    dec byte [row]
+    cmp byte [row], 0
+    je _start
+
+    mov al, [height]
+    sub al, [row]
+    mov [space_count], al
+
+.print_bottom_spaces:
+    cmp byte [space_count], 0
+    jle .print_bottom_stars
+
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, space
+    mov edx, 1
+    int 0x80
+
+    dec byte [space_count]
+    jmp .print_bottom_spaces
+
+.print_bottom_stars:
+    mov al, [row]
+    add al, al
+    dec al
+    mov [star_count], al
+
+.print_bottom_star:
+    cmp byte [star_count], 0
+    jle .next_diamond_bottom
+
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, star
+    mov edx, 1
+    int 0x80
+
+    dec byte [star_count]
+    jmp .print_bottom_star
+
+.next_diamond_bottom:
+    call print_newline
+    jmp .diamond_bottom
+
+print_newline:
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, newline
+    mov edx, 1
+    int 0x80
+    ret
+
+read_number:
+    mov eax, 3
+    mov ebx, 0
+    mov ecx, input_buffer
+    mov edx, 10
+    int 0x80
+
+    xor ecx, ecx
+    mov esi, input_buffer
+
+.next_char:
+    mov al, [esi]
+    cmp al, 10
+    je .done
+    sub al, '0'
+    imul ecx, ecx, 10
+    add ecx, eax
+    inc esi
+    jmp .next_char
+
+.done:
+    mov al, cl
+    ret
+
+exit_program:
+    mov eax, 1
+    xor ebx, ebx
+    int 0x80
